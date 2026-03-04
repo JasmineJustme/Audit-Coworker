@@ -114,3 +114,27 @@ async def toggle_workflow(
     await db.flush()
     await db.refresh(workflow)
     return {"code": 200, "message": "success", "data": {"is_enabled": workflow.is_enabled}}
+
+
+@router.post("/{workflow_id}/test")
+async def test_workflow(
+    workflow_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    import time
+    from app.services.dify_client import dify_client
+
+    result = await db.execute(select(Workflow).where(Workflow.id == workflow_id))
+    workflow = result.scalar_one_or_none()
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    if not workflow.dify_endpoint:
+        raise HTTPException(status_code=400, detail="Workflow 未配置 Endpoint")
+
+    start = time.monotonic()
+    test_result = await dify_client.test_connection(workflow.dify_endpoint, workflow.dify_api_key)
+    latency_ms = int((time.monotonic() - start) * 1000)
+
+    if not test_result["connected"]:
+        raise HTTPException(status_code=502, detail=test_result["error"])
+    return {"code": 200, "message": "success", "data": {"connected": True, "latency_ms": latency_ms}}

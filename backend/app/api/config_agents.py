@@ -125,8 +125,20 @@ async def test_agent(
     agent_id: str,
     db: AsyncSession = Depends(get_db),
 ):
+    import time
+    from app.services.dify_client import dify_client
+
     result = await db.execute(select(Agent).where(Agent.id == agent_id))
     agent = result.scalar_one_or_none()
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
-    return {"code": 200, "message": "success", "data": {"connected": True, "latency_ms": 42}}
+    if not agent.dify_endpoint:
+        raise HTTPException(status_code=400, detail="Agent 未配置 Endpoint")
+
+    start = time.monotonic()
+    test_result = await dify_client.test_connection(agent.dify_endpoint, agent.dify_api_key)
+    latency_ms = int((time.monotonic() - start) * 1000)
+
+    if not test_result["connected"]:
+        raise HTTPException(status_code=502, detail=test_result["error"])
+    return {"code": 200, "message": "success", "data": {"connected": True, "latency_ms": latency_ms}}

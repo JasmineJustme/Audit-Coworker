@@ -66,10 +66,14 @@ export default function ConfigWorkflowsPage() {
 
   const handleTest = async (id: string) => {
     try {
-      await testWorkflow(id);
-      message.success('连接测试成功');
-    } catch {
-      message.error('连接测试失败');
+      const res = await testWorkflow(id);
+      const body = (res as { data: { data?: { latency_ms?: number } } }).data;
+      const latency = body?.data?.latency_ms;
+      message.success(`连接测试成功${latency != null ? `（延迟 ${latency}ms）` : ''}`);
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } } };
+      const detail = err?.response?.data?.detail;
+      message.error(detail || '连接测试失败');
     }
   };
 
@@ -109,9 +113,9 @@ export default function ConfigWorkflowsPage() {
     {
       title: '操作',
       key: 'actions',
-      width: 180,
+      width: 240,
       render: (_: unknown, row: Workflow) => (
-        <Space>
+        <Space size={4} wrap>
           <Button
             type="link"
             size="small"

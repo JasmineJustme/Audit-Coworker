@@ -30,16 +30,53 @@ class DifyClient:
             logger.error(f"Dify Workflow call failed: {e}")
             raise
 
-    async def test_connection(self, endpoint: str, api_key: str) -> bool:
+    @staticmethod
+    def _derive_parameters_url(endpoint: str) -> str:
+        """Derive the Dify /parameters URL from any Dify API endpoint.
+
+        Dify endpoints follow the pattern:
+          {host}/v1/chat-messages
+          {host}/v1/completion-messages
+          {host}/v1/workflows/run
+        The parameters endpoint is always at {host}/v1/parameters.
+        """
+        url = endpoint.rstrip("/")
+        # Find /v1/ or trailing /v1 and build from there
+        v1_idx = url.find("/v1/")
+        if v1_idx != -1:
+            return url[: v1_idx] + "/v1/parameters"
+        if url.endswith("/v1"):
+            return url + "/parameters"
+        # Fallback: strip last path segment (handles custom non-Dify APIs)
+        return url.rsplit("/", 1)[0] + "/parameters"
+
+    async def test_connection(self, endpoint: str, api_key: str) -> dict:
+        """Test connectivity to a Dify endpoint.
+        Returns {"connected": bool, "status_code": int|None, "error": str|None}
+        """
         headers = {"Authorization": f"Bearer {api_key}"}
+        test_url = self._derive_parameters_url(endpoint)
         try:
-            base = endpoint.rstrip("/").rsplit("/", 1)[0]
-            response = await self._client.get(
-                f"{base}/parameters", headers=headers, timeout=10
-            )
-            return response.status_code == 200
-        except Exception:
-            return False
+            response = await self._client.get(test_url, headers=headers, timeout=10)
+            if response.status_code == 200:
+                return {"connected": True, "status_code": 200, "error": None}
+            if response.status_code == 401:
+                return {"connected": False, "status_code": 401, "error": "API Key 无效或已过期"}
+            if response.status_code == 403:
+                return {"connected": False, "status_code": 403, "error": "API Key 权限不足"}
+            if response.status_code == 404:
+                return {"connected": False, "status_code": 404, "error": f"Endpoint 路径不存在: {test_url}"}
+            return {
+                "connected": False,
+                "status_code": response.status_code,
+                "error": f"服务返回异常状态码: {response.status_code}",
+            }
+        except httpx.ConnectError:
+            return {"connected": False, "status_code": None, "error": f"无法连接到服务器，请检查地址是否正确: {endpoint}"}
+        except httpx.TimeoutException:
+            return {"connected": False, "status_code": None, "error": f"连接超时（10秒），服务器无响应: {endpoint}"}
+        except Exception as e:
+            return {"connected": False, "status_code": None, "error": f"连接异常: {str(e)}"}
 
     async def close(self):
         await self._client.aclose()
