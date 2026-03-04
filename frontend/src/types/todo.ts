@@ -1,0 +1,18 @@
+export interface Todo {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority: string;
+  source: string;
+  source_ref?: string;
+  due_date?: string;
+  tags: string[];
+  project?: string;
+  review_status?: string;
+  review_reason?: string;
+  duplicate_of?: string;
+  orchestration_id?: string;
+  created_at: string;
+  updated_at: string;
+}

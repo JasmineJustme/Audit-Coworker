@@ -1,0 +1,63 @@
+import type { ParamDefinition } from './api';
+
+export interface SystemSettings {
+  [key: string]: any;
+}
+
+export interface NotificationPref {
+  id: string;
+  message_type: string;
+  in_app_enabled: boolean;
+  email_enabled: boolean;
+  wechat_enabled: boolean;
+}
+
+export interface NotificationGlobalPref {
+  id: string;
+  dnd_start?: string;
+  dnd_end?: string;
+  merge_strategy: string;
+  merge_window_minutes: number;
+  deadline_advance_minutes: number;
+}
+
+export interface NotificationChannel {
+  id: string;
+  channel_type: string;
+  name: string;
+  dify_endpoint: string;
+  dify_api_key: string;
+  input_mapping: Record<string, unknown>;
+  is_enabled: boolean;
+}
+
+export interface DataSource {
+  id: string;
+  type: string;
+  name: string;
+  dify_endpoint: string;
+  dify_api_key: string;
+  input_params: ParamDefinition[];
+  output_params: ParamDefinition[];
+  is_enabled: boolean;
+  last_sync_at?: string;
+  last_sync_status?: string;
+  last_sync_error?: string;
+}
+
+export interface LLMConfig {
+  id: string;
+  purpose: string;
+  provider: string;
+  model_name: string;
+  api_endpoint: string;
+  api_key: string;
+  temperature: number;
+  top_p: number;
+  max_tokens: number;
+  prompt_template: string;
+  prompt_version: number;
+  total_tokens_used: number;
+  total_cost: number;
+  cost_alert_threshold?: number;
+}
